@@ -6,11 +6,15 @@ SECTION :02
 HOMEWORK:3
 ----------
 PROBLEMS:
+1)There is a glitch when the car hits the wall with a specific angle
 ----------
 ADDITIONAL FEATURES:
 1)far lights added
-2)walls are colored /done
-3)path of the car is drawn(linked list structure is implemented)
+    -to change the light mode(long/short distance and far off) press left mouse click
+    -far length is getting shorter, its radius decreases and brightness increase as it approaches the wall
+2)path of the car is drawn
+    -linked list structure is implemented and recursion technique is used
+    -to delete the path, press right mouse click
 *********/
 
 #ifdef _MSC_VER
@@ -25,7 +29,7 @@ ADDITIONAL FEATURES:
 #include "vec.h"
 
 #define WINDOW_WIDTH  1280
-#define WINDOW_HEIGHT 720
+#define WINDOW_HEIGHT 790
 
 #define TIMER_PERIOD  32 // Period for the timer.
 #define TIMER_ON         1 // 0:disable timer, 1:enable timer
@@ -42,6 +46,57 @@ typedef struct {
     double x, y;
 }vertex_t;
 
+typedef struct node {
+    vec_t data;
+    node* next;
+}node_t;
+
+node_t* getNode() {
+    node_t* newnode;
+    newnode = (node_t*)malloc(sizeof(node_t));
+
+    newnode->next = NULL;
+
+    return newnode;
+}
+
+node_t* addBeginning(node_t* head, vec_t item) {
+    node_t* newnode = getNode();
+
+    newnode->data = item;
+
+    newnode->next = head;
+
+    return newnode;
+}
+
+void addAfter(node_t* p, vec_t item) {
+    node_t* newnode = getNode();
+
+    newnode->data = item;
+    newnode->next = p->next;
+
+    p->next = newnode;
+}
+
+node_t* deleteFirst(node_t* head) {
+    node_t* tmp = head;
+    head = head->next;
+
+    free(tmp);
+    return head;
+}
+
+void deleteAfter(node_t* p) {
+    node_t* del = p->next;
+    p->next = del->next;
+    free(del);
+}
+
+node_t* headp=NULL;
+
+
+
 typedef struct {
     polar_t speed,light;
     vec_t pos;
@@ -54,6 +109,7 @@ car_t car;
 bool paused = 0, mouseout = 0;
 bool lightVis = 1;
 int lightmode = 0;//0:long far,1:short far,2:far off
+bool gamestart = false;
 //
 // to draw circle, center at (x,y)
 // radius r
@@ -69,6 +125,25 @@ void circle(int x, int y, int r)
         glVertex2f(x + r * cos(angle), y + r * sin(angle));
     }
     glEnd();
+}
+
+void displayPath(node_t* head)
+{
+    glColor3ub(245, 66, 227);
+    while (head != NULL)
+    {
+        circle(head->data.x, head->data.y, 2);
+        head = head->next;
+    }
+}
+
+void deletePath(node_t* head)
+{
+    if (head->next != NULL)
+    {
+        deletePath(head->next);
+        deleteAfter(head);
+    }
 }
 
 void circle_wire(int x, int y, int r)
@@ -138,7 +213,7 @@ void vprint2(int x, int y, float size, const char* string, ...) {
 
 void vertex(vertex_t P, vertex_t Tr, double angle)
 {
-    double xp = (P.x * cos(angle) - P.y * sin(angle)) + Tr.x;
+    double xp = (P.x) * cos(angle) - P.y * sin(angle) + Tr.x;
     double yp = (P.x * sin(angle) + P.y * cos(angle)) + Tr.y;
     glVertex2d(xp, yp);
 }
@@ -286,6 +361,10 @@ void drawCar(car_t car)
 
 void drawBg()
 {
+
+    glColor3f(0.8, 0.8, 0.8);
+    glRectf(-winWidth + 100, winHeight, winWidth - 100, -winHeight);
+
     //left wall
     glColor3f(0.3, 0.3, 0.3);
     glBegin(GL_POLYGON);
@@ -326,20 +405,33 @@ void drawBg()
     glColor3f(0.4, 0.4, 0.4);
     glRectf(-400, 300, 400, -300);
 
+
+
     glColor3f(0, 0, 0.8);
-    vprint2(-100, winHeight / 2. - 50, 0.2, "Eren Yesiltepe");
+    vprint2(-450, winHeight / 2. - 40, 0.15, "Eren Yesiltepe 22002527");
 
         if(paused)
-             vprint2(-150, -winHeight / 2. + 30, 0.15, "Paused. Enter spacebar to continue");
+             vprint2(-150, -winHeight / 2. + 25, 0.15, "Paused. Enter spacebar to continue");
         else
-            vprint2(-150, -winHeight / 2. + 30, 0.15, "Playing. Enter spacebar to pause");
+            vprint2(-150, -winHeight / 2. + 25, 0.15, "Playing. Enter spacebar to pause");
 
         if(mouseout)
-            vprint2(-350, -winHeight / 2. + 30, 0.15, "Mouse is outside");
+            vprint2(-350, -winHeight / 2. + 25, 0.15, "Mouse is outside");
         else
-            vprint2(-350, -winHeight / 2. + 30, 0.15, "Mouse is inside");
+            vprint2(-350, -winHeight / 2. + 25, 0.15, "Mouse is inside");
 
-        vprint2(210, -winHeight / 2. + 30, 0.15, "Car angle=%0.2f",car.speed.angle);
+
+        if(lightmode==0)
+            vprint2(-160, winHeight / 2. - 40, 0.15, "Far: long far");
+        else if (lightmode == 1)
+            vprint2(-160, winHeight / 2. - 40, 0.15, "Far: short far");
+        else if (lightmode == 2)
+            vprint2(-160, winHeight / 2. - 40, 0.15, "Far: off");
+
+        vprint2(210, -winHeight / 2. + 25, 0.15, "Car angle=%0.0f",car.speed.angle);
+        vprint2(0, winHeight / 2. - 40, 0.15, "mouse:");
+        vprint2(80, winHeight / 2. - 30, 0.15, "right click: to delete the path");
+        vprint2(80, winHeight / 2. - 50, 0.15, "left click: to change the far mode");
 }
 
 
@@ -350,14 +442,15 @@ void display() {
     //
     // clear window to black
     //
-    glClearColor(0, 0, 0, 0);
+    glClearColor(0.8, 0.8, 0.8, 0);
     glClear(GL_COLOR_BUFFER_BIT);
 
     drawBg();
+    displayPath(headp);
     drawCar(car);
-
-    glColor3f(0, 0, 1);
-    circle(mouse.x, mouse.y, 5);
+    glColor4f(0, 0, 1,0.6);
+    if(!mouseout)
+    circle(mouse.x, mouse.y, 15);
 
 
     glutSwapBuffers();
@@ -448,6 +541,11 @@ void onClick(int button, int stat, int x, int y)
             car.light.magnitude = 20;
 
     }
+    else if (button == GLUT_RIGHT_BUTTON && stat == GLUT_DOWN) {
+        deletePath(headp);
+        headp=deleteFirst(headp);
+        headp=addBeginning(headp, car.pos);
+    }
 
 
     // to refresh the window it calls display() function
@@ -509,9 +607,7 @@ void onMove(int x, int y) {
             car.speed.magnitude = 10;
         }
     }
-   
-        
-    
+
     // to refresh the window it calls display() function
     glutPostRedisplay();
 }
@@ -539,12 +635,24 @@ void onTimer(int v) {
                 tmp = { -tmp.x,tmp.y };
                 car.speed = rec2pol(tmp);
             }
-            else if ((car.pos.y > -290 && car.pos.y < -270) || (car.pos.y < 290 && car.pos.y > 270))
+            else if ((car.pos.y > -280 && car.pos.y < -270) || (car.pos.y < 280 && car.pos.y > 270))
             {
                 tmp = pol2rec(car.speed);
                 tmp = { tmp.x,-tmp.y };
                 car.speed = rec2pol(tmp);
             }
+           
+
+                if (car.pos.x < -390)
+                    car.pos.x += 50;
+                else if(car.pos.x > 390)
+                    car.pos.x -= 50;
+                else if(car.pos.y <-290)
+                    car.pos.y += 50;
+                else if (car.pos.y > 290)
+                    car.pos.y -= 50;
+
+        addAfter(headp, car.pos);
     }
 
     
@@ -586,6 +694,7 @@ void main(int argc, char* argv[]) {
     car.speed.angle = 0;
     car.light.angle = 0;
     car.light.magnitude = 30;
+    headp=addBeginning(headp, car.pos);
 
 
     // mouse registration
