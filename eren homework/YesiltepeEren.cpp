@@ -51,6 +51,7 @@ typedef struct node {
     node* next;
 }node_t;
 
+//linked list implementation to store the path of the car
 node_t* getNode() {
     node_t* newnode;
     newnode = (node_t*)malloc(sizeof(node_t));
@@ -106,8 +107,9 @@ typedef struct {
 vertex_t mouse;
 car_t car;
 
-bool paused = 0, mouseout = 0;
-bool lightVis = 1;
+bool paused = 0,//checks if game is paused(spacebar is pressed)
+    mouseout = 0;
+bool lightVis = 1;//checks if light is visible
 int lightmode = 0;//0:long far,1:short far,2:far off
 bool gamestart = false;
 //
@@ -218,6 +220,7 @@ void vertex(vertex_t P, vertex_t Tr, double angle)
     glVertex2d(xp, yp);
 }
 
+//circle function using vertex function to rotate the shape easily
 void circleVer(int x, int y, int r)
 {
 #define PI 3.1415
@@ -231,6 +234,7 @@ void circleVer(int x, int y, int r)
     glEnd();
 }
 
+//elipse function using vertex function to rotate the shape easily
 void elipseVer(int x, int y, int r1,int r2)
 {
 #define PI 3.1415
@@ -264,7 +268,8 @@ void drawCar(car_t car)
     vertex({ -6 * s,13 * s }, { car.pos.x,car.pos.y }, anglecar);
     glEnd(); 
 
-    glColor3ub(0, 0, 255);
+    //glColor3ub(0, 0, 255);
+    glColor3ub(91, 198, 252);
     glBegin(GL_POLYGON);
     vertex({ -5 * s,8 * s }, { car.pos.x,car.pos.y }, anglecar);
     vertex({ 5* s,8 * s }, { car.pos.x,car.pos.y }, anglecar);
@@ -288,6 +293,7 @@ void drawCar(car_t car)
     glEnd();
 
     //wheels
+    glColor3f(0, 0, 0);
     glBegin(GL_POLYGON);
     vertex({ -7 * s,11 * s }, { car.pos.x,car.pos.y }, anglecar);
     vertex({ -6 * s,11 * s }, { car.pos.x,car.pos.y }, anglecar);
@@ -317,19 +323,17 @@ void drawCar(car_t car)
     glEnd();
 
     //fars
-   glColor3f(0.5, 0.5, 0);
+    glColor3ub(252, 236, 91);
 
    circleVer(-4*s, 14*s, s);
    circleVer(4*s , 14*s , s);
   
-
+   // draw the light
    if (lightmode!=2)
    {
        double xp = (0 - (car.light.magnitude  + 14) * s * sin(anglecar)) + car.pos.x;
        double yp = (0 + (car.light.magnitude+14) * s * cos(anglecar)) + car.pos.y;
        float changelight;
-
-       printf("yp:%.2f,xp:%.2f\n", yp, xp);
 
        if (xp < -400)
            changelight = (-400 - xp) / 10.;
@@ -343,7 +347,8 @@ void drawCar(car_t car)
            changelight = 0;
 
        car.light.magnitude -= 2*changelight;
-       glColor4f(66/255., 239/255., 245/255.,0.5);
+       
+       glColor4ub(252, 236, 91,120);
 
        glBegin(GL_TRIANGLES);
        vertex({0,14 * s }, { car.pos.x,car.pos.y }, anglecar);
@@ -351,14 +356,14 @@ void drawCar(car_t car)
        vertex({ car.light.magnitude / 6. * powf(3,1 / 2.) * s,(car.light.magnitude * 3 / 4. + 14) * s }, { car.pos.x,car.pos.y }, anglecar);
        glEnd();
 
-
-       glColor4f(66 / 255., 239 / 255., 245 / 255., 0.5+changelight/10);
+       glColor4f(252 / 255., 236 / 255., 91 / 255., 0.5 + changelight / 10);
        elipseVer(0, car.light.magnitude*s + 12 * s- changelight / 2, car.light.magnitude / 3*s , car.light.magnitude/3*s- changelight);
        
    }
 
 }
 
+//draw background
 void drawBg()
 {
 
@@ -465,6 +470,7 @@ void onKeyDown(unsigned char key, int x, int y)
     if (key == 27)
         exit(0);
 
+    //check if space is presed and game paused
     if (key == ' ' && paused == 0)
         paused = true;
     else if (key == ' ' && paused == 1)
@@ -530,7 +536,7 @@ void onSpecialKeyUp(int key, int x, int y)
 void onClick(int button, int stat, int x, int y)
 {
     // Write your codes here.
-    if (button == GLUT_LEFT_BUTTON && stat == GLUT_DOWN) {
+    if (button == GLUT_LEFT_BUTTON && stat == GLUT_DOWN) {//changes light mode
         lightmode++;
         if (lightmode == 3)
             lightmode = 0;
@@ -541,7 +547,7 @@ void onClick(int button, int stat, int x, int y)
             car.light.magnitude = 20;
 
     }
-    else if (button == GLUT_RIGHT_BUTTON && stat == GLUT_DOWN) {
+    else if (button == GLUT_RIGHT_BUTTON && stat == GLUT_DOWN) {// deletes the path
         deletePath(headp);
         headp=deleteFirst(headp);
         headp=addBeginning(headp, car.pos);
@@ -594,7 +600,7 @@ void onMove(int x, int y) {
         mouse.x = x - winWidth / 2;
         mouse.y = winHeight / 2 - y;
 
-        if (x2 > -400 && x2 < 400 && y2<300 && y2>-300)
+        if (x2 > -400 && x2 < 400 && y2<300 && y2>-300)//if mouse pointer is inside the borders
         {
             mouseout = false;
 
@@ -606,6 +612,7 @@ void onMove(int x, int y) {
             mouseout = true;
             car.speed.magnitude = 10;
         }
+
     }
 
     // to refresh the window it calls display() function
@@ -619,16 +626,18 @@ void onTimer(int v) {
     // Write your codes here.
     if (!paused)
     {
+        //checks if the car checks the mouse pointer
         if (car.pos.x<mouse.x + 20 && car.pos.x>mouse.x - 20 && car.pos.y<mouse.y + 20 && car.pos.y>mouse.y - 20)
             car.speed.magnitude = 0;
         else {
             car.speed.magnitude = 10;
             car.pos = addV(car.pos, pol2rec(car.speed));
         }
-        printf("mag:%0.2f\n", car.speed.magnitude);
+
 
         vec_t tmp;
         if (mouseout)
+            // if car hits the borders
             if ((car.pos.x > -390 && car.pos.x < -370) || (car.pos.x < 390 && car.pos.x > 370))
             {
                 tmp = pol2rec(car.speed);
@@ -641,18 +650,9 @@ void onTimer(int v) {
                 tmp = { tmp.x,-tmp.y };
                 car.speed = rec2pol(tmp);
             }
-           
 
-                if (car.pos.x < -390)
-                    car.pos.x += 50;
-                else if(car.pos.x > 390)
-                    car.pos.x -= 50;
-                else if(car.pos.y <-290)
-                    car.pos.y += 50;
-                else if (car.pos.y > 290)
-                    car.pos.y -= 50;
 
-        addAfter(headp, car.pos);
+        addAfter(headp, car.pos);//add new position to path
     }
 
     
@@ -690,6 +690,7 @@ void main(int argc, char* argv[]) {
     glutKeyboardUpFunc(onKeyUp);
     glutSpecialUpFunc(onSpecialKeyUp);
 
+    //initilization of variables
     car.speed.magnitude = 10;
     car.speed.angle = 0;
     car.light.angle = 0;
