@@ -6,7 +6,7 @@ SECTION :02
 HOMEWORK:3
 ----------
 PROBLEMS:
-1)There is a glitch when the car hits the wall with a specific angle
+1)program does not check the mouse near the border(if the mouse is closer than 5 pixels from the wall it does not check)
 ----------
 ADDITIONAL FEATURES:
 1)far lights added
@@ -96,8 +96,6 @@ void deleteAfter(node_t* p) {
 
 node_t* headp=NULL;
 
-
-
 typedef struct {
     polar_t speed,light;
     vec_t pos;
@@ -108,10 +106,11 @@ vertex_t mouse;
 car_t car;
 
 bool paused = 0,//checks if game is paused(spacebar is pressed)
-    mouseout = 0;
+    mouseout = 0,
+    moutborder;
 bool lightVis = 1;//checks if light is visible
 int lightmode = 0;//0:long far,1:short far,2:far off
-bool gamestart = false;
+
 //
 // to draw circle, center at (x,y)
 // radius r
@@ -420,7 +419,7 @@ void drawBg()
         else
             vprint2(-150, -winHeight / 2. + 25, 0.15, "Playing. Enter spacebar to pause");
 
-        if(mouseout)
+        if(moutborder)
             vprint2(-350, -winHeight / 2. + 25, 0.15, "Mouse is outside");
         else
             vprint2(-350, -winHeight / 2. + 25, 0.15, "Mouse is inside");
@@ -454,7 +453,7 @@ void display() {
     displayPath(headp);
     drawCar(car);
     glColor4f(0, 0, 1,0.6);
-    if(!mouseout)
+    if(!moutborder)
     circle(mouse.x, mouse.y, 15);
 
 
@@ -590,29 +589,30 @@ void onMoveDown(int x, int y) {
 //   y2 = winHeight / 2 - y1
 void onMove(int x, int y) {
     // Write your codes here.
-    int x2 = x - winWidth / 2;
-    int y2 = winHeight / 2 - y;
 
-    
+    mouse.x = x - winWidth / 2;
+    mouse.y = winHeight / 2 - y;
 
     if (!paused)
     {
-        mouse.x = x - winWidth / 2;
-        mouse.y = winHeight / 2 - y;
-
-        if (x2 > -400 && x2 < 400 && y2<300 && y2>-300)//if mouse pointer is inside the borders
+        if (mouse.x > -375 && mouse.x < 375 && mouse.y<270 && mouse.y>-270)//if mouse pointer is inside the borders
         {
             mouseout = false;
-
+            
             car.speed.angle = atan2(mouse.y - car.pos.y, mouse.x - car.pos.x) / D2R;
             if (car.speed.angle < 0)
                 car.speed.angle += 360;
         }
+        else if (mouse.x > -400 && mouse.x < 400 && mouse.y<300 && mouse.y>-300)
+        {
+            mouseout = true;
+            moutborder = false;
+        }
         else {
+            moutborder = true;
             mouseout = true;
             car.speed.magnitude = 10;
         }
-
     }
 
     // to refresh the window it calls display() function
@@ -626,19 +626,14 @@ void onTimer(int v) {
     // Write your codes here.
     if (!paused)
     {
-        //checks if the car checks the mouse pointer
-        if (car.pos.x<mouse.x + 20 && car.pos.x>mouse.x - 20 && car.pos.y<mouse.y + 20 && car.pos.y>mouse.y - 20)
-            car.speed.magnitude = 0;
-        else {
-            car.speed.magnitude = 10;
-            car.pos = addV(car.pos, pol2rec(car.speed));
-        }
-
+        car.pos = addV(car.pos, pol2rec(car.speed));
 
         vec_t tmp;
         if (mouseout)
+        {
+           
             // if car hits the borders
-            if ((car.pos.x > -390 && car.pos.x < -370) || (car.pos.x < 390 && car.pos.x > 370))
+            if ((car.pos.x > -385 && car.pos.x < -375) || (car.pos.x < 385 && car.pos.x > 375))
             {
                 tmp = pol2rec(car.speed);
                 tmp = { -tmp.x,tmp.y };
@@ -650,6 +645,18 @@ void onTimer(int v) {
                 tmp = { tmp.x,-tmp.y };
                 car.speed = rec2pol(tmp);
             }
+        }
+        else
+            //checks if the car checks the mouse pointer
+            if (car.pos.x<mouse.x + 20 && car.pos.x>mouse.x - 20 && car.pos.y<mouse.y + 20 && car.pos.y>mouse.y - 20)
+                car.speed.magnitude = 0;
+            else 
+                car.speed.magnitude = 10;
+                
+            
+
+
+
 
 
         addAfter(headp, car.pos);//add new position to path
